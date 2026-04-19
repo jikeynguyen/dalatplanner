@@ -24,8 +24,10 @@ export default function ScheduleManager({
   const [slots, setSlots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddingSlot, setIsAddingSlot] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     fetchDays();
   }, []);
 
@@ -192,7 +194,7 @@ export default function ScheduleManager({
     onRefresh();
   }
 
-  if (loading) return <div className="p-8 text-center text-gray-400">Đang tải dữ liệu...</div>;
+  if (!isMounted || loading) return <div className="p-8 text-center text-gray-400">Đang tải dữ liệu...</div>;
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
