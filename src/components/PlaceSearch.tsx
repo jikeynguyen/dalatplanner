@@ -62,6 +62,22 @@ export default function PlaceSearch({ onSelect, placeholder = "Tìm kiếm đị
         return;
       }
 
+      // Kiểm tra nếu là link Google Maps dạng ?q=... (Trích xuất tên địa điểm)
+      if (query.includes('google.com/maps') && query.includes('q=')) {
+        try {
+          const url = new URL(query);
+          const q = url.searchParams.get('q');
+          if (q) {
+            // Loại bỏ Plus Code (ví dụ: 4H6P+VG6) nếu có ở đầu
+            const cleanQ = q.replace(/^[A-Z0-9]{4}\+[A-Z0-9]{2,}\s*/, '');
+            setQuery(cleanQ); // Tự động điền tên địa điểm vào ô tìm kiếm
+            return;
+          }
+        } catch (e) {
+          console.error("URL parse error:", e);
+        }
+      }
+
       // Kiểm tra nếu là link rút gọn
       if (query.includes('share.google') || query.includes('maps.app.goo.gl')) {
         setSuggestions([{
