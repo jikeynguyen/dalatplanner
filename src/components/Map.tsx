@@ -129,9 +129,17 @@ export default function MapView({ locations, focusLocation }: MapViewProps) {
                   <p className="text-sm text-gray-600 mb-3">{loc.description}</p>
                 )}
                 <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
-                  <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
-                    <MapPin className="w-3 h-3" />
-                    <span>Đà Lạt, Lâm Đồng</span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
+                      <MapPin className="w-3 h-3" />
+                      <span>Đà Lạt, Lâm Đồng</span>
+                    </div>
+                    {loc.price && loc.price > 0 && (
+                      <div className="text-[11px] font-black text-amber-600 flex items-center gap-1">
+                        <span>💰</span>
+                        <span>{loc.price.toLocaleString('vi-VN')} VNĐ</span>
+                      </div>
+                    )}
                   </div>
                   <a 
                     href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}

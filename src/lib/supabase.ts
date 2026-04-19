@@ -30,6 +30,7 @@ export type Location = {
   description?: string;
   images: string[];
   is_primary: boolean;
+  price?: number;
 };
 
 export async function getFullItinerary() {

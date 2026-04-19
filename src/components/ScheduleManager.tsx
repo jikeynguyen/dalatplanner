@@ -245,6 +245,31 @@ export default function ScheduleManager({
                     </div>
                   </div>
 
+                  <div className="flex items-center gap-2 mb-3 bg-gray-100/50 px-3 py-1.5 rounded-xl border border-gray-100">
+                    <span className="text-[10px] font-bold text-gray-400">VNĐ</span>
+                    <input 
+                      type="number"
+                      placeholder="Giá tiền (ví dụ: 50000)"
+                      value={loc.price || ''}
+                      onChange={(e) => {
+                        const newSlots = slots.map(s => {
+                          if (s.id === slot.id) {
+                            return {
+                              ...s,
+                              locations: s.locations.map((l: any) => 
+                                l.id === loc.id ? { ...l, price: parseInt(e.target.value) || 0 } : l
+                              )
+                            };
+                          }
+                          return s;
+                        });
+                        setSlots(newSlots);
+                      }}
+                      onBlur={(e) => updateLocation(loc.id, { price: parseInt(e.target.value) || 0 })}
+                      className="w-full text-xs font-bold text-emerald-700 bg-transparent outline-none"
+                    />
+                  </div>
+
                   <textarea 
                     placeholder="Mô tả địa điểm..."
                     value={loc.description || ''}
