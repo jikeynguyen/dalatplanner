@@ -17,7 +17,9 @@ export default function Sidebar({
   onRefresh, 
   onLocationClick, 
   activeDayId, 
-  setActiveDayId 
+  setActiveDayId,
+  pickingLocationId,
+  setPickingLocationId
 }: SidebarProps) {
   const [view, setView] = useState<'schedule' | 'settings'>('schedule');
 
