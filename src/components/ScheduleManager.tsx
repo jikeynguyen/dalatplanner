@@ -289,12 +289,12 @@ export default function ScheduleManager({
                         onClick={() => handleVote(slot.id, loc.id)}
                         className={clsx(
                           "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all border",
-                          loc.vote_count > 0 ? "bg-red-50 border-red-100 text-red-500" : "bg-gray-50 border-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-400"
+                          (loc.vote_count || 0) > 0 ? "bg-red-50 border-red-100 text-red-500" : "bg-gray-50 border-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-400"
                         )}
                         title="Bình chọn địa điểm này"
                       >
-                        <Heart className={clsx("w-3.5 h-3.5", loc.vote_count > 0 && "fill-current")} />
-                        <span className="text-[10px] font-bold">{loc.vote_count}</span>
+                        <Heart className={clsx("w-3.5 h-3.5", (loc.vote_count || 0) > 0 && "fill-current")} />
+                        <span className="text-[10px] font-bold">{loc.vote_count || 0}</span>
                       </button>
                       <button 
                         onClick={() => updateLocation(loc.id, { is_primary: !loc.is_primary })}
