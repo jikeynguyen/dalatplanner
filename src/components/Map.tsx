@@ -81,7 +81,12 @@ function MapUpdater({ locations, focusLocation }: MapViewProps) {
   return null;
 }
 
-export default function MapView({ locations, focusLocation }: MapViewProps) {
+export default function MapView({ 
+  locations, 
+  focusLocation, 
+  isPickingLocation, 
+  onMapClick 
+}: MapViewProps) {
   // Nhóm địa điểm theo thời gian để vẽ đường đi chính, bắt đầu và kết thúc tại HOME
   const primaryPath = [
     [HOME_COORDS.lat, HOME_COORDS.lng] as [number, number],
