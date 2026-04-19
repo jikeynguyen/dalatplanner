@@ -39,9 +39,24 @@ export default function PlaceSearch({ onSelect, placeholder = "Tìm kiếm đị
         return;
       }
 
+      // Kiểm tra nếu query là tọa độ (ví dụ: 11.94, 108.43)
+      const coordRegex = /^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/;
+      const match = query.match(coordRegex);
+      
+      if (match) {
+        setSuggestions([{
+          place_id: 0,
+          display_name: `Sử dụng tọa độ: ${query}`,
+          lat: match[1],
+          lon: match[3]
+        }]);
+        setIsOpen(true);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
-        // Nominatim API for OpenStreetMap search
         const response = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + " Da Lat")}&limit=5`
         );
