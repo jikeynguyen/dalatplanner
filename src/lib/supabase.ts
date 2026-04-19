@@ -31,6 +31,7 @@ export type Location = {
   images: string[];
   is_primary: boolean;
   price?: number;
+  vote_count?: number;
 };
 
 export async function getFullItinerary() {
