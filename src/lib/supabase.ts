@@ -1,13 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+const supabaseUrl = 'https://cvensemhzsrlcruviirh.supabase.co';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseAnonKey = 'sb_publishable_G4jNkxea5S_nMYyTaz3P5g_zVcZ0x6T';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Supabase environment variables are missing!");
-}
-
-export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder');
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type Day = {
   id: string;

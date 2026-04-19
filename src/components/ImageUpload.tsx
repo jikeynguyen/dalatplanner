@@ -8,8 +8,8 @@ interface ImageUploadProps {
   onChange: (urls: string[]) => void;
 }
 
-const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+const cloudName = "eggoeggoeggoeggo";
+const uploadPreset = "dalat2026";
 
 export default function ImageUpload({ images, onChange }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
