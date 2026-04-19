@@ -32,11 +32,19 @@ export default function Home() {
   async function fetchDayLocations(dayId: string) {
     const { data: slots } = await supabase
       .from('time_slots')
-      .select('locations(*)')
-      .eq('day_id', dayId);
+      .select(`
+        *,
+        locations (*)
+      `)
+      .eq('day_id', dayId)
+      .order('start_time', { ascending: true });
     
     if (slots) {
-      const allLocs = slots.flatMap(s => s.locations);
+      // Làm phẳng danh sách: Slot sớm nhất sẽ chứa các location (option) đầu tiên
+      const allLocs = slots.flatMap(s => {
+        // Trong cùng 1 slot, ưu tiên option "Chính" lên trước để đánh số đẹp
+        return s.locations.sort((a: any, b: any) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+      });
       setLocations(allLocs);
     }
   }
