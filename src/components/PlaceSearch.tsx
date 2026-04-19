@@ -77,10 +77,20 @@ export default function PlaceSearch({ onSelect, placeholder = "Tìm kiếm đị
 
       setIsLoading(true);
       try {
+        const queryWithCity = encodeURIComponent(query + " Da Lat");
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + " Da Lat")}&limit=5`
+          `https://nominatim.openstreetmap.org/search?format=json&q=${queryWithCity}&limit=5`
         );
-        const data = await response.json();
+        let data = await response.json();
+
+        // Nếu không tìm thấy ở Đà Lạt, thử tìm kiếm tự do (có thể địa điểm ở ngoại ô)
+        if (data.length === 0) {
+          const fallbackRes = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
+          );
+          data = await fallbackRes.json();
+        }
+
         setSuggestions(data);
         setIsOpen(true);
       } catch (error) {
@@ -88,7 +98,7 @@ export default function PlaceSearch({ onSelect, placeholder = "Tìm kiếm đị
       } finally {
         setIsLoading(false);
       }
-    }, 500);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [query]);
