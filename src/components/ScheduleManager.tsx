@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase, Day, TimeSlot, Location } from '@/lib/supabase';
-import { Plus, Trash2, Clock, MapPin, ChevronRight, Save, Image as ImageIcon, CheckCircle2, Navigation } from 'lucide-react';
+import { Plus, Trash2, Clock, MapPin, ChevronRight, Save, Image as ImageIcon, CheckCircle2, Navigation, Heart } from 'lucide-react';
 import PlaceSearch from './PlaceSearch';
 import ImageUpload from './ImageUpload';
 import { clsx } from 'clsx';
@@ -38,13 +38,66 @@ export default function ScheduleManager({
     setLoading(false);
   }
 
+  const [voterId, setVoterId] = useState<string>('');
+
+  useEffect(() => {
+    let id = localStorage.getItem('voter_id');
+    if (!id) {
+      id = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('voter_id', id);
+    }
+    setVoterId(id);
+  }, []);
+
   async function fetchSlots(dayId: string) {
+    // Lấy slots kèm locations và đếm số lượng votes cho mỗi location
     const { data } = await supabase
       .from('time_slots')
-      .select('*, locations(*)')
+      .select(`
+        *,
+        locations (
+          *,
+          votes (count)
+        )
+      `)
       .eq('day_id', dayId)
       .order('start_time');
-    if (data) setSlots(data);
+    
+    if (data) {
+      const processedSlots = data.map(slot => ({
+        ...slot,
+        locations: slot.locations.map((loc: any) => ({
+          ...loc,
+          vote_count: loc.votes[0]?.count || 0
+        }))
+      }));
+      setSlots(processedSlots);
+    }
+  }
+
+  async function handleVote(slotId: string, locationId: string) {
+    if (!voterId) return;
+
+    // Xóa vote cũ của người này trong khung giờ này (nếu có) để thực hiện "đổi vote"
+    await supabase
+      .from('votes')
+      .delete()
+      .eq('time_slot_id', slotId)
+      .eq('user_fingerprint', voterId);
+
+    // Thêm vote mới
+    const { error } = await supabase
+      .from('votes')
+      .insert([
+        { time_slot_id: slotId, location_id: locationId, user_fingerprint: voterId }
+      ]);
+
+    if (error) {
+      console.error("Lỗi vote:", error);
+    } else {
+      fetchSlots(activeDayId!);
+      onRefresh();
+    }
   }
 
   async function addDay() {
@@ -232,6 +285,17 @@ export default function ScheduleManager({
                       >
                         <Navigation className="w-4 h-4" />
                       </a>
+                      <button 
+                        onClick={() => handleVote(slot.id, loc.id)}
+                        className={clsx(
+                          "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all border",
+                          loc.vote_count > 0 ? "bg-red-50 border-red-100 text-red-500" : "bg-gray-50 border-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-400"
+                        )}
+                        title="Bình chọn địa điểm này"
+                      >
+                        <Heart className={clsx("w-3.5 h-3.5", loc.vote_count > 0 && "fill-current")} />
+                        <span className="text-[10px] font-bold">{loc.vote_count}</span>
+                      </button>
                       <button 
                         onClick={() => updateLocation(loc.id, { is_primary: !loc.is_primary })}
                         className={clsx("p-1.5 rounded-lg transition-colors", loc.is_primary ? "text-emerald-600 bg-emerald-50" : "text-gray-400 hover:bg-gray-100")}
