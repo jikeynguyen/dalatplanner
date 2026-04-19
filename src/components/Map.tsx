@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location } from '@/lib/supabase';
-import { Camera, MapPin, Clock, Navigation } from 'lucide-react';
+import { Camera, MapPin, Clock, Navigation, Crosshair } from 'lucide-react';
 
 // Fix for Leaflet default icon issue
 const DefaultIcon = L.icon({
@@ -42,6 +42,19 @@ const createCustomIcon = (label: string, isPrimary: boolean = true, isHome: bool
 interface MapViewProps {
   locations: Location[];
   focusLocation?: Location;
+  isPickingLocation?: boolean;
+  onMapClick?: (lat: number, lng: number) => void;
+}
+
+function MapEvents({ onMapClick, isPickingLocation }: { onMapClick?: (lat: number, lng: number) => void, isPickingLocation?: boolean }) {
+  useMapEvents({
+    click(e) {
+      if (isPickingLocation && onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
 }
 
 function MapUpdater({ locations, focusLocation }: MapViewProps) {
@@ -92,6 +105,7 @@ export default function MapView({ locations, focusLocation }: MapViewProps) {
         />
         
         <MapUpdater locations={locations} focusLocation={focusLocation} />
+        <MapEvents onMapClick={onMapClick} isPickingLocation={isPickingLocation} />
 
         {/* Root Point: HOME */}
         <Marker 

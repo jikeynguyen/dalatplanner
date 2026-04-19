@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase, Day, TimeSlot, Location } from '@/lib/supabase';
-import { Plus, Trash2, Clock, MapPin, ChevronRight, Save, Image as ImageIcon, CheckCircle2, Navigation, Heart } from 'lucide-react';
+import { Plus, Trash2, Clock, MapPin, ChevronRight, Save, Image as ImageIcon, CheckCircle2, Navigation, Heart, Crosshair } from 'lucide-react';
 import PlaceSearch from './PlaceSearch';
 import ImageUpload from './ImageUpload';
 import { clsx } from 'clsx';
@@ -10,11 +10,15 @@ import { clsx } from 'clsx';
 export default function ScheduleManager({ 
   onRefresh, 
   activeDayId, 
-  setActiveDayId 
+  setActiveDayId,
+  pickingLocationId,
+  setPickingLocationId
 }: { 
   onRefresh: () => void, 
   activeDayId: string | null,
-  setActiveDayId: (id: string) => void
+  setActiveDayId: (id: string) => void,
+  pickingLocationId: string | null,
+  setPickingLocationId: (id: string | null) => void
 }) {
   const [days, setDays] = useState<Day[]>([]);
   const [slots, setSlots] = useState<any[]>([]);
@@ -276,6 +280,18 @@ export default function ScheduleManager({
                       />
                     </div>
                     <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => setPickingLocationId(pickingLocationId === loc.id ? null : loc.id)}
+                        className={clsx(
+                          "p-1.5 rounded-lg transition-all",
+                          pickingLocationId === loc.id 
+                            ? "bg-amber-500 text-white animate-pulse" 
+                            : "text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
+                        )}
+                        title="Chọn vị trí trên bản đồ"
+                      >
+                        <Crosshair className="w-4 h-4" />
+                      </button>
                       <a 
                         href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}
                         target="_blank"

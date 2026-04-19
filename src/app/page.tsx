@@ -21,6 +21,7 @@ export default function Home() {
   const [focusLocation, setFocusLocation] = useState<Location | undefined>(undefined);
   const [activeDayId, setActiveDayId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [pickingLocationId, setPickingLocationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeDayId) {
@@ -40,6 +41,14 @@ export default function Home() {
     }
   }
 
+  const handleMapClick = async (lat: number, lng: number) => {
+    if (pickingLocationId) {
+      await supabase.from('locations').update({ lat, lng }).eq('id', pickingLocationId);
+      setPickingLocationId(null);
+      handleRefresh();
+    }
+  };
+
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
@@ -51,12 +60,16 @@ export default function Home() {
         onLocationClick={setFocusLocation}
         activeDayId={activeDayId}
         setActiveDayId={setActiveDayId}
+        pickingLocationId={pickingLocationId}
+        setPickingLocationId={setPickingLocationId}
       />
       
       <div className="flex-1 relative">
         <MapView 
           locations={locations} 
           focusLocation={focusLocation} 
+          isPickingLocation={!!pickingLocationId}
+          onMapClick={handleMapClick}
         />
         
         {/* Connection Status Overlay */}

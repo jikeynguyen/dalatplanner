@@ -9,6 +9,8 @@ interface SidebarProps {
   onLocationClick: (loc: any) => void;
   activeDayId: string | null;
   setActiveDayId: (id: string) => void;
+  pickingLocationId: string | null;
+  setPickingLocationId: (id: string | null) => void;
 }
 
 export default function Sidebar({ 
@@ -39,6 +41,8 @@ export default function Sidebar({
         onRefresh={onRefresh} 
         activeDayId={activeDayId}
         setActiveDayId={setActiveDayId}
+        pickingLocationId={pickingLocationId}
+        setPickingLocationId={setPickingLocationId}
       />
 
       {/* Footer Branding */}
