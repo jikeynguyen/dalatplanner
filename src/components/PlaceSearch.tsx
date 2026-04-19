@@ -41,14 +41,21 @@ export default function PlaceSearch({ onSelect, placeholder = "Tìm kiếm đị
 
       // Kiểm tra nếu query là tọa độ (ví dụ: 11.94, 108.43)
       const coordRegex = /^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/;
-      const match = query.match(coordRegex);
+      const coordMatch = query.match(coordRegex);
       
-      if (match) {
+      // Kiểm tra nếu query là link Google Maps (chứa @lat,lng)
+      const urlRegex = /@(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/;
+      const urlMatch = query.match(urlRegex);
+
+      if (coordMatch || urlMatch) {
+        const lat = coordMatch ? coordMatch[1] : urlMatch![1];
+        const lon = coordMatch ? coordMatch[3] : urlMatch![3];
+        
         setSuggestions([{
           place_id: 0,
-          display_name: `Sử dụng tọa độ: ${query}`,
-          lat: match[1],
-          lon: match[3]
+          display_name: `Trích xuất tọa độ: ${lat}, ${lon}`,
+          lat: lat,
+          lon: lon
         }]);
         setIsOpen(true);
         setIsLoading(false);
