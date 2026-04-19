@@ -62,6 +62,19 @@ export default function PlaceSearch({ onSelect, placeholder = "Tìm kiếm đị
         return;
       }
 
+      // Kiểm tra nếu là link rút gọn
+      if (query.includes('share.google') || query.includes('maps.app.goo.gl')) {
+        setSuggestions([{
+          place_id: -1,
+          display_name: `⚠️ Link rút gọn không có tọa độ. Hãy mở link rồi copy địa chỉ dài trên trình duyệt!`,
+          lat: '0',
+          lon: '0'
+        }]);
+        setIsOpen(true);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         const response = await fetch(
