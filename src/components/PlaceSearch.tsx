@@ -1,6 +1,7 @@
-// ... (previous imports)
+"use client";
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Loader2, Check } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
 
 interface Suggestion {
   place_id: number | string;
