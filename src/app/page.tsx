@@ -18,6 +18,7 @@ const MapView = dynamic(() => import('@/components/Map'), {
 
 export default function Home() {
   const [locations, setLocations] = useState<Location[]>([]);
+  const [allSlotIds, setAllSlotIds] = useState<string[]>([]);
   const [focusLocation, setFocusLocation] = useState<Location | undefined>(undefined);
   const [activeDayId, setActiveDayId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -40,6 +41,7 @@ export default function Home() {
       .order('start_time', { ascending: true });
     
     if (slots) {
+      setAllSlotIds(slots.map(s => s.id));
       // Làm phẳng danh sách: Slot sớm nhất sẽ chứa các location (option) đầu tiên
       const allLocs = slots.flatMap(s => {
         // Trong cùng 1 slot, ưu tiên option "Chính" lên trước để đánh số đẹp
@@ -75,6 +77,7 @@ export default function Home() {
       <div className="flex-1 relative">
         <MapView 
           locations={locations} 
+          allSlotIds={allSlotIds}
           focusLocation={focusLocation} 
           isPickingLocation={!!pickingLocationId}
           onMapClick={handleMapClick}

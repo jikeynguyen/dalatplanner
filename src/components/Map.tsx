@@ -55,6 +55,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 interface MapViewProps {
   locations: Location[];
+  allSlotIds: string[];
   focusLocation?: Location;
   isPickingLocation?: boolean;
   onMapClick?: (lat: number, lng: number) => void;
@@ -97,12 +98,11 @@ function MapUpdater({ locations, focusLocation }: MapViewProps) {
 
 export default function MapView({ 
   locations, 
+  allSlotIds,
   focusLocation, 
   isPickingLocation, 
   onMapClick 
 }: MapViewProps) {
-  // Lấy danh sách unique time_slot_id để gán màu
-  const uniqueSlotIds = Array.from(new Set(locations.map(l => l.time_slot_id)));
 
   // Nhóm địa điểm theo thời gian để vẽ đường đi chính
   const primaryLocations = locations.filter(l => l.is_primary);
@@ -125,7 +125,7 @@ export default function MapView({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <MapUpdater locations={locations} focusLocation={focusLocation} />
+        <MapUpdater locations={locations} focusLocation={focusLocation} allSlotIds={[]} />
         <MapEvents onMapClick={onMapClick} isPickingLocation={isPickingLocation} />
 
         {/* Root Point: HOME */}
@@ -141,7 +141,7 @@ export default function MapView({
 
         {/* Vẽ các đường từ HOME tới từng địa điểm */}
         {locations.map((loc, idx) => {
-          const color = getSlotColor(loc.time_slot_id, uniqueSlotIds);
+          const color = getSlotColor(loc.time_slot_id, allSlotIds);
           const distance = calculateDistance(HOME_COORDS.lat, HOME_COORDS.lng, loc.lat, loc.lng);
           const midLat = (HOME_COORDS.lat + loc.lat) / 2;
           const midLng = (HOME_COORDS.lng + loc.lng) / 2;
@@ -184,7 +184,7 @@ export default function MapView({
         })}
 
         {locations.map((loc, idx) => {
-          const color = getSlotColor(loc.time_slot_id, uniqueSlotIds);
+          const color = getSlotColor(loc.time_slot_id, allSlotIds);
           const isFocused = focusLocation?.id === loc.id;
           
           return (
