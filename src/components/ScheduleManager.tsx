@@ -6,6 +6,7 @@ import { Plus, Trash2, Clock, MapPin, ChevronRight, Save, Image as ImageIcon, Ch
 import PlaceSearch from './PlaceSearch';
 import ImageUpload from './ImageUpload';
 import { clsx } from 'clsx';
+import { getSlotColor } from '@/lib/colors';
 
 export default function ScheduleManager({ 
   onRefresh, 
@@ -240,6 +241,10 @@ export default function ScheduleManager({
             
             <div className="flex items-center justify-between group">
               <div className="flex items-center gap-3">
+                <div 
+                  className="w-3 h-3 rounded-full shadow-sm shrink-0" 
+                  style={{ backgroundColor: getSlotColor(slot.id, slots.map(s => s.id)) }}
+                />
                 <input 
                   type="time" 
                   value={slot.start_time.substring(0, 5)} 

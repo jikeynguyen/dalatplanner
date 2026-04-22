@@ -16,13 +16,15 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
+import { getSlotColor } from '@/lib/colors';
+
 const HOME_COORDS = { lat: 11.949347, lng: 108.431673 };
 
-const createCustomIcon = (label: string, isPrimary: boolean = true, isHome: boolean = false) => {
+const createCustomIcon = (label: string, color: string, isHome: boolean = false) => {
   return L.divIcon({
     className: 'custom-div-icon',
     html: `<div style="
-      background-color: ${isHome ? '#f59e0b' : (isPrimary ? '#065f46' : '#94a3b8')};
+      background-color: ${isHome ? '#f59e0b' : color};
       color: white;
       width: ${isHome ? '32px' : '28px'};
       height: ${isHome ? '32px' : '28px'};
@@ -37,6 +39,18 @@ const createCustomIcon = (label: string, isPrimary: boolean = true, isHome: bool
     iconSize: [isHome ? 32 : 28, isHome ? 32 : 28],
     iconAnchor: [isHome ? 16 : 14, isHome ? 16 : 14],
   });
+};
+
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 };
 
 interface MapViewProps {
@@ -87,12 +101,14 @@ export default function MapView({
   isPickingLocation, 
   onMapClick 
 }: MapViewProps) {
-  // Nhóm địa điểm theo thời gian để vẽ đường đi chính, bắt đầu và kết thúc tại HOME
+  // Lấy danh sách unique time_slot_id để gán màu
+  const uniqueSlotIds = Array.from(new Set(locations.map(l => l.time_slot_id)));
+
+  // Nhóm địa điểm theo thời gian để vẽ đường đi chính
+  const primaryLocations = locations.filter(l => l.is_primary);
   const primaryPath = [
     [HOME_COORDS.lat, HOME_COORDS.lng] as [number, number],
-    ...locations
-      .filter(l => l.is_primary)
-      .map(l => [l.lat, l.lng] as [number, number]),
+    ...primaryLocations.map(l => [l.lat, l.lng] as [number, number]),
     [HOME_COORDS.lat, HOME_COORDS.lng] as [number, number]
   ];
 
@@ -115,7 +131,7 @@ export default function MapView({
         {/* Root Point: HOME */}
         <Marker 
           position={[HOME_COORDS.lat, HOME_COORDS.lng]}
-          icon={createCustomIcon('', true, true)}
+          icon={createCustomIcon('', '#f59e0b', true)}
         >
           <Popup>
             <div className="p-1 font-bold">HOME: Phê Thạch (G1-01)</div>
@@ -123,94 +139,117 @@ export default function MapView({
           </Popup>
         </Marker>
 
-        {locations.map((loc, idx) => (
-          <Marker 
-            key={loc.id || idx}
-            position={[loc.lat, loc.lng]}
-            icon={createCustomIcon(loc.is_primary ? (idx + 1).toString() : '?', loc.is_primary)}
-          >
-            <Popup minWidth={250} className="custom-popup">
-              <div className="p-1">
-                {loc.images && loc.images.length > 0 && (
-                  <div className="flex gap-1 mb-2 overflow-x-auto pb-1 scrollbar-hide">
-                    {loc.images.map((img, i) => (
-                      <img 
-                        key={i} 
-                        src={img} 
-                        className="w-32 h-24 object-cover rounded-lg shrink-0" 
-                        alt={loc.name}
-                      />
-                    ))}
-                  </div>
-                )}
-                <h3 className="text-lg font-bold text-gray-900 mb-1">{loc.name}</h3>
-                {loc.description && (
-                  <p className="text-sm text-gray-600 mb-3">{loc.description}</p>
-                )}
-                <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
-                      <MapPin className="w-3 h-3" />
-                      <span>Đà Lạt, Lâm Đồng</span>
-                    </div>
-                    {loc.price && loc.price > 0 && (
-                      <div className="text-[11px] font-black text-amber-600 flex items-center gap-1">
-                        <span>💰</span>
-                        <span>{loc.price.toLocaleString('vi-VN')} VNĐ</span>
-                      </div>
-                    )}
-                  </div>
-                  <a 
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors"
-                  >
-                    <Navigation className="w-3 h-3" />
-                    CHỈ ĐƯỜNG
-                  </a>
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {/* Vẽ các đường từ HOME tới từng địa điểm */}
+        {locations.map((loc, idx) => {
+          const color = getSlotColor(loc.time_slot_id, uniqueSlotIds);
+          const distance = calculateDistance(HOME_COORDS.lat, HOME_COORDS.lng, loc.lat, loc.lng);
+          const midLat = (HOME_COORDS.lat + loc.lat) / 2;
+          const midLng = (HOME_COORDS.lng + loc.lng) / 2;
 
-        {/* Tuyến đường chính */}
-        {primaryPath.length > 1 && (
+          return (
+            <React.Fragment key={`dist-${loc.id || idx}`}>
+              <Polyline 
+                positions={[
+                  [HOME_COORDS.lat, HOME_COORDS.lng],
+                  [loc.lat, loc.lng]
+                ]}
+                pathOptions={{ 
+                  color: color, 
+                  weight: 3, 
+                  opacity: 0.6,
+                  dashArray: '10, 10'
+                }}
+              />
+              <Marker 
+                position={[midLat, midLng]}
+                icon={L.divIcon({
+                  className: 'distance-label',
+                  html: `<div style="
+                    background: white;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    border: 1px solid ${color};
+                    color: ${color};
+                    font-size: 10px;
+                    font-weight: bold;
+                    white-space: nowrap;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+                  ">${distance < 1 ? (distance * 1000).toFixed(0) + ' m' : distance.toFixed(1) + ' km'}</div>`,
+                  iconSize: [40, 20],
+                  iconAnchor: [20, 10],
+                })}
+              />
+            </React.Fragment>
+          );
+        })}
+
+        {locations.map((loc, idx) => {
+          const color = getSlotColor(loc.time_slot_id, uniqueSlotIds);
+          return (
+            <Marker 
+              key={loc.id || idx}
+              position={[loc.lat, loc.lng]}
+              icon={createCustomIcon(loc.is_primary ? (idx + 1).toString() : '?', color)}
+            >
+              <Popup minWidth={250} className="custom-popup">
+                <div className="p-1">
+                  {loc.images && loc.images.length > 0 && (
+                    <div className="flex gap-1 mb-2 overflow-x-auto pb-1 scrollbar-hide">
+                      {loc.images.map((img, i) => (
+                        <img 
+                          key={i} 
+                          src={img} 
+                          className="w-32 h-24 object-cover rounded-lg shrink-0" 
+                          alt={loc.name}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">{loc.name}</h3>
+                  {loc.description && (
+                    <p className="text-sm text-gray-600 mb-3">{loc.description}</p>
+                  )}
+                  <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
+                        <MapPin className="w-3 h-3" />
+                        <span>Đà Lạt, Lâm Đồng</span>
+                      </div>
+                      {loc.price && loc.price > 0 && (
+                        <div className="text-[11px] font-black text-amber-600 flex items-center gap-1">
+                          <span>💰</span>
+                          <span>{loc.price.toLocaleString('vi-VN')} VNĐ</span>
+                        </div>
+                      )}
+                    </div>
+                    <a 
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors"
+                    >
+                      <Navigation className="w-3 h-3" />
+                      CHỈ ĐƯỜNG
+                    </a>
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* Tuyến đường chính nối các điểm primary (tùy chọn, giữ lại nếu muốn xem lộ trình) */}
+        {primaryPath.length > 2 && (
           <Polyline 
             positions={primaryPath}
             pathOptions={{ 
               color: '#059669', 
-              weight: 5, 
-              opacity: 0.7,
+              weight: 2, 
+              opacity: 0.3,
               lineJoin: 'round'
             }}
           />
         )}
-
-        {/* Vẽ các đường nhánh cho options phụ (nếu cần thiết) */}
-        {locations.filter(l => !l.is_primary).map((loc, i) => {
-          // Tìm địa điểm chính cùng khung giờ
-          const primaryInSameSlot = locations.find(l => l.time_slot_id === loc.time_slot_id && l.is_primary);
-          if (primaryInSameSlot) {
-            return (
-              <Polyline 
-                key={`branch-${i}`}
-                positions={[
-                  [primaryInSameSlot.lat, primaryInSameSlot.lng],
-                  [loc.lat, loc.lng]
-                ]}
-                pathOptions={{ 
-                  color: '#94a3b8', 
-                  weight: 2, 
-                  dashArray: '5, 5',
-                  opacity: 0.5
-                }}
-              />
-            );
-          }
-          return null;
-        })}
       </MapContainer>
     </div>
   );
