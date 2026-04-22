@@ -426,11 +426,21 @@ export default function ScheduleManager({
                       <div className="space-y-3">
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
-                            <div className={clsx(
-                              "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm",
-                              loc.is_primary ? "bg-emerald-600 text-white font-black text-xs" : "bg-gray-200 text-gray-500 font-bold text-[10px]"
-                            )}>
-                              {loc.is_primary ? (slots.filter(s => s.start_time <= slot.start_time).reduce((acc, curr) => acc + curr.locations.filter((l: any) => l.is_primary).length, 0)) : '?'}
+                            {/* Số thứ tự với màu đồng bộ bản đồ */}
+                            <div 
+                              className={clsx(
+                                "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm text-white font-black text-xs",
+                                !loc.is_primary && "opacity-50"
+                              )}
+                              style={{ 
+                                backgroundColor: getSlotColor(slot.id, slots.map(s => s.id)) 
+                              }}
+                            >
+                              {loc.is_primary ? (
+                                slots.flatMap(s => s.locations)
+                                     .filter(l => l.is_primary)
+                                     .findIndex(l => l.id === loc.id) + 1
+                              ) : '?'}
                             </div>
                             <div>
                               <h4 className={clsx(
