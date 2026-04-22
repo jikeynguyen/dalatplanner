@@ -13,13 +13,15 @@ export default function ScheduleManager({
   activeDayId, 
   setActiveDayId,
   pickingLocationId,
-  setPickingLocationId
+  setPickingLocationId,
+  onLocationClick
 }: { 
   onRefresh: () => void, 
   activeDayId: string | null,
   setActiveDayId: (id: string) => void,
   pickingLocationId: string | null,
-  setPickingLocationId: (id: string | null) => void
+  setPickingLocationId: (id: string | null) => void,
+  onLocationClick: (loc: any) => void
 }) {
   const [days, setDays] = useState<Day[]>([]);
   const [slots, setSlots] = useState<any[]>([]);
@@ -273,13 +275,20 @@ export default function ScheduleManager({
             </div>
 
             {/* Locations/Options */}
-            <div className="space-y-3">
+            <div className="space-y-4 ml-4 border-l border-emerald-100 pl-4 py-2">
               {slot.locations?.map((loc: Location) => (
-                <div key={loc.id} className={clsx(
-                  "p-4 rounded-2xl border transition-all",
-                  loc.is_primary ? "bg-white border-emerald-100 shadow-sm" : "bg-gray-50 border-gray-100"
-                )}>
-                  <div className="flex justify-between items-start mb-3">
+                <div 
+                  key={loc.id} 
+                  onClick={() => onLocationClick(loc)}
+                  className={clsx(
+                    "p-4 rounded-2xl border transition-all cursor-pointer group/card relative",
+                    loc.is_primary ? "bg-white border-emerald-200 shadow-sm ring-1 ring-emerald-50" : "bg-gray-50/50 border-gray-100 hover:bg-white hover:border-emerald-100"
+                  )}
+                >
+                  {/* Tree connection line */}
+                  <div className="absolute -left-[17px] top-1/2 -translate-y-1/2 w-4 h-[2px] bg-emerald-100" />
+                  
+                  <div className="flex justify-between items-start mb-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex-1 mr-2">
                       <PlaceSearch 
                         placeholder={loc.name}

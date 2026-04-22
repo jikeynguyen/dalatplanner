@@ -45,6 +45,7 @@ export default function Sidebar({
         setActiveDayId={setActiveDayId}
         pickingLocationId={pickingLocationId}
         setPickingLocationId={setPickingLocationId}
+        onLocationClick={onLocationClick}
       />
 
       {/* Footer Branding */}

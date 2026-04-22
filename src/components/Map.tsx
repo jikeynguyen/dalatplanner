@@ -185,11 +185,20 @@ export default function MapView({
 
         {locations.map((loc, idx) => {
           const color = getSlotColor(loc.time_slot_id, uniqueSlotIds);
+          const isFocused = focusLocation?.id === loc.id;
+          
           return (
             <Marker 
-              key={loc.id || idx}
+              key={`${loc.id || idx}-${isFocused}`}
               position={[loc.lat, loc.lng]}
               icon={createCustomIcon(loc.is_primary ? (idx + 1).toString() : '?', color)}
+              eventHandlers={{
+                add: (e) => {
+                  if (isFocused) {
+                    e.target.openPopup();
+                  }
+                },
+              }}
             >
               <Popup minWidth={250} className="custom-popup">
                 <div className="p-1">
