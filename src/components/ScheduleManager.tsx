@@ -28,6 +28,7 @@ export default function ScheduleManager({
   const [loading, setLoading] = useState(true);
   const [isAddingSlot, setIsAddingSlot] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -75,10 +76,12 @@ export default function ScheduleManager({
     if (data) {
       const processedSlots = data.map(slot => ({
         ...slot,
-        locations: slot.locations.map((loc: any) => ({
-          ...loc,
-          vote_count: loc.votes[0]?.count || 0
-        }))
+        locations: slot.locations
+          .map((loc: any) => ({
+            ...loc,
+            vote_count: loc.votes[0]?.count || 0
+          }))
+          .sort((a: any, b: any) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
       }));
       setSlots(processedSlots);
     }
@@ -186,9 +189,14 @@ export default function ScheduleManager({
   }
 
   async function updateLocation(locId: string, updates: Partial<Location>) {
-    await supabase.from('locations').update(updates).eq('id', locId);
-    fetchSlots(activeDayId!);
-    onRefresh();
+    try {
+      const { error } = await supabase.from('locations').update(updates).eq('id', locId);
+      if (error) throw error;
+      fetchSlots(activeDayId!);
+      onRefresh();
+    } catch (error) {
+      console.error("Lỗi cập nhật địa điểm:", error);
+    }
   }
 
   async function deleteLocation(locId: string) {
@@ -274,128 +282,225 @@ export default function ScheduleManager({
               </button>
             </div>
 
-            {/* Locations/Options */}
+            {/* Các địa điểm trong khung giờ */}
             <div className="space-y-4 ml-4 border-l border-emerald-100 pl-4 py-2">
-              {slot.locations?.map((loc: Location) => (
-                <div 
-                  key={loc.id} 
-                  onClick={() => onLocationClick(loc)}
-                  className={clsx(
-                    "p-4 rounded-2xl border transition-all cursor-pointer group/card relative",
-                    loc.is_primary ? "bg-white border-emerald-200 shadow-sm ring-1 ring-emerald-50" : "bg-gray-50/50 border-gray-100 hover:bg-white hover:border-emerald-100"
-                  )}
-                >
-                  {/* Tree connection line */}
-                  <div className="absolute -left-[17px] top-1/2 -translate-y-1/2 w-4 h-[2px] bg-emerald-100" />
-                  
-                  <div className="flex justify-between items-start mb-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex-1 mr-2">
-                      <PlaceSearch 
-                        placeholder={loc.name}
-                        onSelect={(name, lat, lng) => updateLocation(loc.id, { name, lat, lng })} 
-                      />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => setPickingLocationId(pickingLocationId === loc.id ? null : loc.id)}
-                        className={clsx(
-                          "p-1.5 rounded-lg transition-all",
-                          pickingLocationId === loc.id 
-                            ? "bg-amber-500 text-white animate-pulse" 
-                            : "text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
+              {slot.locations?.map((loc: Location) => {
+                const isEditing = editingLocationId === loc.id;
+                
+                return (
+                  <div 
+                    key={loc.id} 
+                    onClick={() => !isEditing && onLocationClick(loc)}
+                    className={clsx(
+                      "rounded-2xl border transition-all relative overflow-hidden",
+                      isEditing ? "p-0 border-emerald-500 shadow-xl ring-2 ring-emerald-100 ring-offset-2 z-10" : 
+                      (loc.is_primary ? "p-4 bg-white border-emerald-200 shadow-sm ring-1 ring-emerald-50 group/card cursor-pointer" : "p-4 bg-gray-50/50 border-gray-100 hover:bg-white hover:border-emerald-100 group/card cursor-pointer")
+                    )}
+                  >
+                    {/* Tree connection line */}
+                    {!isEditing && <div className="absolute -left-[17px] top-8 w-4 h-[2px] bg-emerald-100" />}
+
+                    {isEditing ? (
+                      /* CHẾ ĐỘ CHỈNH SỬA */
+                      <div className="bg-white p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="bg-emerald-600 text-white p-1.5 rounded-lg">
+                            <Clock className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">Chỉnh sửa địa điểm</span>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Tên & Vị trí</label>
+                            <PlaceSearch 
+                              placeholder={loc.name}
+                              onSelect={(name, lat, lng) => {
+                                // Cập nhật local state tạm thời để hiển thị
+                                setSlots(slots.map(s => s.id === slot.id ? {
+                                  ...s,
+                                  locations: s.locations.map((l: any) => l.id === loc.id ? { ...l, name, lat, lng } : l)
+                                } : s));
+                              }} 
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Giá tiền (VNĐ)</label>
+                              <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200 focus-within:border-emerald-500 transition-all">
+                                <input 
+                                  type="number"
+                                  value={loc.price || ''}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value) || 0;
+                                    setSlots(slots.map(s => s.id === slot.id ? {
+                                      ...s,
+                                      locations: s.locations.map((l: any) => l.id === loc.id ? { ...l, price: val } : l)
+                                    } : s));
+                                  }}
+                                  className="w-full text-sm font-bold text-emerald-700 bg-transparent outline-none"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Lựa chọn chính</label>
+                              <button 
+                                onClick={() => {
+                                  setSlots(slots.map(s => s.id === slot.id ? {
+                                    ...s,
+                                    locations: s.locations.map((l: any) => l.id === loc.id ? { ...l, is_primary: !l.is_primary } : l)
+                                  } : s));
+                                }}
+                                className={clsx(
+                                  "w-full py-2 rounded-xl border font-bold text-xs transition-all flex items-center justify-center gap-2",
+                                  loc.is_primary ? "bg-emerald-600 border-emerald-600 text-white" : "bg-white border-gray-200 text-gray-500"
+                                )}
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                {loc.is_primary ? "CHÍNH" : "THỨ YẾU"}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Mô tả trải nghiệm</label>
+                            <textarea 
+                              placeholder="Mô tả này sẽ hiện trên bản đồ..."
+                              value={loc.description || ''}
+                              onChange={(e) => {
+                                setSlots(slots.map(s => s.id === slot.id ? {
+                                  ...s,
+                                  locations: s.locations.map((l: any) => l.id === loc.id ? { ...l, description: e.target.value } : l)
+                                } : s));
+                              }}
+                              className="w-full p-3 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-xl focus:border-emerald-500 outline-none resize-none transition-all h-24"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Hình ảnh</label>
+                            <ImageUpload 
+                              images={loc.images || []} 
+                              onChange={(urls) => {
+                                setSlots(slots.map(s => s.id === slot.id ? {
+                                  ...s,
+                                  locations: s.locations.map((l: any) => l.id === loc.id ? { ...l, images: urls } : l)
+                                } : s));
+                              }} 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button 
+                            onClick={async () => {
+                              await updateLocation(loc.id, { 
+                                name: loc.name, 
+                                lat: loc.lat, 
+                                lng: loc.lng, 
+                                price: loc.price, 
+                                description: loc.description, 
+                                images: loc.images,
+                                is_primary: loc.is_primary
+                              });
+                              setEditingLocationId(null);
+                            }}
+                            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:translate-y-[-1px] active:translate-y-0 transition-all uppercase tracking-widest"
+                          >
+                            Cập nhật thay đổi
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setEditingLocationId(null);
+                              fetchSlots(activeDayId!); // Khôi phục từ DB
+                            }}
+                            className="px-6 py-3 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-all"
+                          >
+                            HỦY
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* CHẾ ĐỘ HIỂN THỊ (VIEW) */
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <div className={clsx(
+                              "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm",
+                              loc.is_primary ? "bg-emerald-600 text-white font-black text-xs" : "bg-gray-200 text-gray-500 font-bold text-[10px]"
+                            )}>
+                              {loc.is_primary ? (slots.filter(s => s.start_time <= slot.start_time).reduce((acc, curr) => acc + curr.locations.filter((l: any) => l.is_primary).length, 0)) : '?'}
+                            </div>
+                            <div>
+                              <h4 className={clsx(
+                                "font-bold transition-all leading-tight",
+                                loc.is_primary ? "text-lg text-gray-900" : "text-sm text-gray-500"
+                              )}>
+                                {loc.name}
+                              </h4>
+                              {loc.price && loc.price > 0 && (
+                                <div className="text-[11px] font-black text-amber-600 mt-0.5">
+                                  💰 {loc.price.toLocaleString('vi-VN')} VNĐ
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              onClick={() => setEditingLocationId(loc.id)}
+                              className="p-2 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition-all"
+                              title="Chỉnh sửa chi tiết"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => setPickingLocationId(pickingLocationId === loc.id ? null : loc.id)}
+                              className={clsx(
+                                "p-2 rounded-xl transition-all",
+                                pickingLocationId === loc.id ? "bg-amber-500 text-white animate-pulse" : "text-gray-400 hover:bg-emerald-50 hover:text-emerald-600"
+                              )}
+                              title="Chọn tọa độ trên map"
+                            >
+                              <Crosshair className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleVote(slot.id, loc.id)}
+                              className={clsx(
+                                "flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all border shadow-sm",
+                                (loc.vote_count || 0) > 0 ? "bg-red-50 border-red-100 text-red-500" : "bg-white border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-400"
+                              )}
+                            >
+                              <Heart className={clsx("w-3.5 h-3.5", (loc.vote_count || 0) > 0 && "fill-current")} />
+                              <span className="text-[10px] font-black">{loc.vote_count || 0}</span>
+                            </button>
+                            <button onClick={() => deleteLocation(loc.id)} className="p-2 text-gray-300 hover:text-red-500 rounded-xl">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {loc.description && (
+                          <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed pl-10 border-l-2 border-gray-100 ml-3.5">
+                            {loc.description}
+                          </p>
                         )}
-                        title="Chọn vị trí trên bản đồ"
-                      >
-                        <Crosshair className="w-4 h-4" />
-                      </button>
-                      <a 
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                        title="Mở Google Maps chỉ đường"
-                      >
-                        <Navigation className="w-4 h-4" />
-                      </a>
-                      <button 
-                        onClick={() => handleVote(slot.id, loc.id)}
-                        className={clsx(
-                          "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all border",
-                          (loc.vote_count || 0) > 0 ? "bg-red-50 border-red-100 text-red-500" : "bg-gray-50 border-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-400"
+
+                        {loc.images && loc.images.length > 0 && (
+                          <div className="flex gap-2 pl-10 pt-1 overflow-x-auto scrollbar-hide">
+                            {loc.images.map((img, i) => (
+                              <div key={i} className="relative w-16 h-12 rounded-lg overflow-hidden shrink-0 shadow-sm border border-white">
+                                <img src={img} className="absolute inset-0 w-full h-full object-cover" />
+                              </div>
+                            ))}
+                          </div>
                         )}
-                        title="Bình chọn địa điểm này"
-                      >
-                        <Heart className={clsx("w-3.5 h-3.5", (loc.vote_count || 0) > 0 && "fill-current")} />
-                        <span className="text-[10px] font-bold">{loc.vote_count || 0}</span>
-                      </button>
-                      <button 
-                        onClick={() => updateLocation(loc.id, { is_primary: !loc.is_primary })}
-                        className={clsx("p-1.5 rounded-lg transition-colors", loc.is_primary ? "text-emerald-600 bg-emerald-50" : "text-gray-400 hover:bg-gray-100")}
-                        title="Chọn làm phương án chính"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => deleteLocation(loc.id)} className="p-1.5 text-gray-400 hover:text-red-500">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
-
-                  <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2 bg-gray-100/50 px-3 py-1.5 rounded-xl border border-gray-100">
-                      <span className="text-[10px] font-bold text-gray-400">VNĐ</span>
-                      <input 
-                        type="number"
-                        placeholder="Giá tiền (ví dụ: 50000)"
-                        value={loc.price || ''}
-                        onChange={(e) => {
-                          const newSlots = slots.map(s => {
-                            if (s.id === slot.id) {
-                              return {
-                                ...s,
-                                locations: s.locations.map((l: any) => 
-                                  l.id === loc.id ? { ...l, price: parseInt(e.target.value) || 0 } : l
-                                )
-                              };
-                            }
-                            return s;
-                          });
-                          setSlots(newSlots);
-                        }}
-                        onBlur={(e) => updateLocation(loc.id, { price: parseInt(e.target.value) || 0 })}
-                        className="w-full text-xs font-bold text-emerald-700 bg-transparent outline-none"
-                      />
-                    </div>
-
-                    <textarea 
-                      placeholder="Mô tả địa điểm..."
-                      value={loc.description || ''}
-                      onChange={(e) => {
-                        const newSlots = slots.map(s => {
-                          if (s.id === slot.id) {
-                            return {
-                              ...s,
-                              locations: s.locations.map((l: any) => 
-                                l.id === loc.id ? { ...l, description: e.target.value } : l
-                              )
-                            };
-                          }
-                          return s;
-                        });
-                        setSlots(newSlots);
-                      }}
-                      onBlur={(e) => updateLocation(loc.id, { description: e.target.value })}
-                      className="w-full text-xs text-gray-500 bg-transparent resize-none outline-none border-b border-transparent focus:border-emerald-100 transition-all"
-                      rows={2}
-                    />
-
-                    <ImageUpload 
-                      images={loc.images || []} 
-                      onChange={(urls) => updateLocation(loc.id, { images: urls })} 
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               <button 
                 onClick={() => addLocation(slot.id)}
